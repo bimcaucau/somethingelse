@@ -12,9 +12,16 @@ DFINE:
   encoder: HybridHSFPNEncoder
   decoder: DFINETransformer
 
+# Add, default for step lr scheduler 
+lrsheduler: flatcosine
+lr_gamma: 1
+warmup_iter: 500
+flat_epoch: 4000000
+no_aug_epoch: 0
+
 HGNetv2:
   pretrained: True
-  local_model_dir: weight/hgnetv2/
+  local_model_dir: ../RT-DETR-main/D-FINE/weight/hgnetv2/
 
 # HybridEncoder:
 #   in_channels: [512, 1024, 2048]
@@ -33,6 +40,7 @@ HGNetv2:
 #   expansion: 1.0
 #   depth_mult: 1
 #   act: 'silu'
+
 HybridHSFPNEncoder:
   in_channels: [512, 1024, 2048]
   feat_strides: [8, 16, 32]
@@ -52,7 +60,6 @@ HybridHSFPNEncoder:
 
   # HS-FPN specific
   use_hsfpn: true
-
 
 
 DFINETransformer:
@@ -84,11 +91,11 @@ DFINETransformer:
   query_select_method: default # default, agnostic
 
 
-DFINEPostProcessor:
+PostProcessor:
   num_top_queries: 300
 
 
-DFINECriterion:
+DEIMCriterion:
   weight_dict: {loss_vfl: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5}
   losses: ['vfl', 'boxes', 'local']
   alpha: 0.75
