@@ -757,11 +757,16 @@ class DFINETransformer(nn.Module):
         self, memory: torch.Tensor, spatial_shapes, denoising_logits=None, denoising_bbox_unact=None
     ):
         # prepare input for decoder
-        if self.training or self.eval_spatial_size is None:
-            anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
-        else:
-            anchors = self.anchors
-            valid_mask = self.valid_mask
+        # if self.training or self.eval_spatial_size is None:
+        #     anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
+        # else:
+        #     anchors = self.anchors
+        #     valid_mask = self.valid_mask
+        print(f"Memory shape: {memory.shape}, Spatial shapes: {spatial_shapes}")  
+        anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)  
+        print(f"Valid mask shape: {valid_mask.shape}, Memory shape: {memory.shape}")  
+        if valid_mask.shape[1] != memory.shape[1]:  
+            raise ValueError(f"Shape mismatch: valid_mask {valid_mask.shape}, memory {memory.shape}")  
         if memory.shape[0] > 1:
             anchors = anchors.repeat(memory.shape[0], 1, 1)
 
