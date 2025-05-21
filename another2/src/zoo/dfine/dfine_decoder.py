@@ -762,9 +762,9 @@ class DFINETransformer(nn.Module):
         # else:
         #     anchors = self.anchors
         #     valid_mask = self.valid_mask
-        print(f"Memory shape: {memory.shape}, Spatial shapes: {spatial_shapes}")  
+        #print(f"Memory shape: {memory.shape}, Spatial shapes: {spatial_shapes}")  
         anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)  
-        print(f"Valid mask shape: {valid_mask.shape}, Memory shape: {memory.shape}")  
+        #print(f"Valid mask shape: {valid_mask.shape}, Memory shape: {memory.shape}")  
         if valid_mask.shape[1] != memory.shape[1]:  
             raise ValueError(f"Shape mismatch: valid_mask {valid_mask.shape}, memory {memory.shape}")  
         if memory.shape[0] > 1:
