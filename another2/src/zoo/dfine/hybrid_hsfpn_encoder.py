@@ -109,21 +109,37 @@ class HybridHSFPNEncoder(nn.Module):
         return torch.concat([out_w.sin(), out_w.cos(), out_h.sin(), out_h.cos()], dim=1)[None, :, :]
 
     def forward(self, feats):
-        assert len(feats) == len(self.in_channels)
+        # assert len(feats) == len(self.in_channels)
 
-        # Step 1: Project backbone features
-        proj_feats = [proj(f) for proj, f in zip(self.input_proj, feats)]
+        # # Step 1: Project backbone features
+        # proj_feats = [proj(f) for proj, f in zip(self.input_proj, feats)]
 
-        # Step 2: Optional transformer encoder
-        for idx, enc in zip(self.use_encoder_idx, self.encoder):
-            B, C, H, W = proj_feats[idx].shape
-            x = proj_feats[idx].flatten(2).permute(0, 2, 1)
-            pos = getattr(self, f'pos_embed{idx}', None)
-            if pos is not None:
-                pos = pos.to(x.device)
-            x = enc(x, pos_embed=pos)
+        # # Step 2: Optional transformer encoder
+        # for idx, enc in zip(self.use_encoder_idx, self.encoder):
+        #     B, C, H, W = proj_feats[idx].shape
+        #     x = proj_feats[idx].flatten(2).permute(0, 2, 1)
+        #     pos = getattr(self, f'pos_embed{idx}', None)
+        #     if pos is not None:
+        #         pos = pos.to(x.device)
+        #     x = enc(x, pos_embed=pos)
+        #     proj_feats[idx] = x.permute(0, 2, 1).reshape(B, C, H, W)
+        assert len(feats) == len(self.in_channels)  
+    
+        # Step 1: Project backbone features  
+        proj_feats = [proj(f) for proj, f in zip(self.input_proj, feats)]  
+    
+        # Step 2: Optional transformer encoder  
+        for idx, enc in zip(self.use_encoder_idx, self.encoder):  
+            B, C, H, W = proj_feats[idx].shape  
+            x = proj_feats[idx].flatten(2).permute(0, 2, 1)  
+            
+            # Generate position embedding dynamically based on current feature size  
+            pos = self.build_2d_sincos_position_embedding(  
+                W, H, self.hidden_dim, self.pe_temperature  
+            ).to(x.device)  
+            
+            x = enc(x, pos_embed=pos)  
             proj_feats[idx] = x.permute(0, 2, 1).reshape(B, C, H, W)
-
         # Step 3: HS-FPN fusion
         out_feats = self.hsfpn(proj_feats)
 
@@ -152,7 +168,12 @@ class TransformerEncoderLayer(nn.Module):
             raise ValueError("Unsupported activation")
 
     def with_pos_embed(self, tensor, pos):
+        if pos is not None and tensor.shape[1] != pos.shape[1]:  
+            print(f"Shape mismatch: tensor {tensor.shape}, pos {pos.shape}")  
+            # Resize position embedding to match tensor shape  
+            pos = pos[:, :tensor.shape[1], :]  
         return tensor if pos is None else tensor + pos
+    
 
     def forward(self, src, src_mask=None, pos_embed=None):
         q = k = self.with_pos_embed(src, pos_embed)
