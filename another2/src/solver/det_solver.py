@@ -67,11 +67,11 @@ class DetSolver(BaseSolver):
             if dist_utils.is_dist_available_and_initialized():
                 self.train_dataloader.sampler.set_epoch(epoch)
 
-            if epoch == self.train_dataloader.collate_fn.stop_epoch:
-                self.load_resume_state(str(self.output_dir / "best_stg1.pth"))
-                if self.ema:
-                    self.ema.decay = self.train_dataloader.collate_fn.ema_restart_decay
-                    print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
+            # if epoch == self.train_dataloader.collate_fn.stop_epoch:
+            #     self.load_resume_state(str(self.output_dir / "best_stg1.pth"))
+            #     if self.ema:
+            #         self.ema.decay = self.train_dataloader.collate_fn.ema_restart_decay
+            #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
 
             train_stats = train_one_epoch(
                 self.model,
@@ -161,14 +161,14 @@ class DetSolver(BaseSolver):
                             self.state_dict(), self.output_dir / "best_stg1.pth"
                         )
 
-                elif epoch >= self.train_dataloader.collate_fn.stop_epoch:
-                    best_stat = {
-                        "epoch": -1,
-                    }
-                    if self.ema:
-                        self.ema.decay -= 0.0001
-                        self.load_resume_state(str(self.output_dir / "best_stg1.pth"))
-                        print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
+                # elif epoch >= self.train_dataloader.collate_fn.stop_epoch:
+                #     best_stat = {
+                #         "epoch": -1,
+                #     }
+                #     if self.ema:
+                #         self.ema.decay -= 0.0001
+                #         self.load_resume_state(str(self.output_dir / "best_stg1.pth"))
+                #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
 
             log_stats = {
                 **{f"train_{k}": v for k, v in train_stats.items()},
