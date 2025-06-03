@@ -37,7 +37,19 @@ class YAMLConfig(BaseConfig):
     def model(self) -> torch.nn.Module:
         if self._model is None and "model" in self.yaml_cfg:
             self._model = create(self.yaml_cfg["model"], self.global_cfg)
-        return super().model
+
+            for name, param in self._model.backbone.named_parameters():
+                param.requires_grad = False
+
+            for name, param in self._model.decoder.named_parameters():  
+                param.requires_grad = False  
+                
+            print("Backbone & decoder frozen")
+            for name, param in self._model.named_parameters():
+                if not param.requires_grad:
+                    print(f"Frozen: {name}")
+
+        return self._model
 
     @property
     def postprocessor(self) -> torch.nn.Module:
