@@ -16,8 +16,10 @@ from ..misc import dist_utils, stats
 from ._solver import BaseSolver
 from .det_engine import evaluate, train_one_epoch
 
-
+def count_trainable(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 class DetSolver(BaseSolver):
+
     def fit(self):
         self.train()
         args = self.cfg
@@ -72,6 +74,19 @@ class DetSolver(BaseSolver):
             #     if self.ema:
             #         self.ema.decay = self.train_dataloader.collate_fn.ema_restart_decay
             #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
+            if epoch in [9, 15]:
+                print(f"Trainable parameters after epoch {epoch}: {count_trainable(self.model):,}")
+
+            if epoch == 9:
+                print("Unfreezing decoder at epoch 9...")
+                for param in self.model.decoder.parameters():
+                    param.requires_grad = True
+            
+            if epoch == 15:
+                print("Unfreezing backbone at epoch 15...")
+                for param in self.model.backbone.parameters():
+                    param.requires_grad = True
+
 
             train_stats = train_one_epoch(
                 self.model,
