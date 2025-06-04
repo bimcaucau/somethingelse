@@ -79,12 +79,12 @@ class DetSolver(BaseSolver):
 
             if epoch == 9:
                 print("Unfreezing decoder at epoch 9...")
-                for param in self.model.decoder.parameters():
+                for param in self.model.module.decoder.parameters():
                     param.requires_grad = True
             
             if epoch == 15:
                 print("Unfreezing backbone at epoch 15...")
-                for param in self.model.backbone.parameters():
+                for param in self.model.module.backbone.parameters():
                     param.requires_grad = True
 
 
