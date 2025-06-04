@@ -74,18 +74,19 @@ class DetSolver(BaseSolver):
             #     if self.ema:
             #         self.ema.decay = self.train_dataloader.collate_fn.ema_restart_decay
             #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
-            if epoch in [9, 15]:
-                print(f"Trainable parameters after epoch {epoch}: {count_trainable(self.model):,}")
+            model = self.model.module if hasattr(self.model, "module") else self.model
 
             if epoch == 9:
                 print("Unfreezing decoder at epoch 9...")
-                for param in self.model.module.decoder.parameters():
-                    param.requires_grad = True
-            
+                for param in model.decoder.parameters():
+                    if param.dtype.is_floating_point:
+                        param.requires_grad = True
+
             if epoch == 15:
                 print("Unfreezing backbone at epoch 15...")
-                for param in self.model.module.backbone.parameters():
-                    param.requires_grad = True
+                for param in model.backbone.parameters():
+                    if param.dtype.is_floating_point:
+                        param.requires_grad = True
 
 
             train_stats = train_one_epoch(
