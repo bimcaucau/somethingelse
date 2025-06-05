@@ -76,18 +76,60 @@ class DetSolver(BaseSolver):
             #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
             model = self.model.module if hasattr(self.model, "module") else self.model
 
+            # ========== UNFREEZE DECODER ========== #
             if epoch == 9:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
                     if param.dtype.is_floating_point:
                         param.requires_grad = True
 
+                # Rebuild optimizer with LR groups
+                decoder_params = []
+                other_params = []
+
+                for name, param in model.named_parameters():
+                    if param.requires_grad:
+                        if "decoder" in name:
+                            decoder_params.append(param)
+                        else:
+                            other_params.append(param)
+
+                self.optimizer = torch.optim.AdamW([
+                    {"params": other_params, "lr": args.lr},               # normal LR
+                    {"params": decoder_params, "lr": args.lr * 0.1},       # reduced LR for decoder
+                ], weight_decay=args.weight_decay)
+
+                print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
+
+
+            # ========== UNFREEZE BACKBONE ========== #
             if epoch == 15:
                 print("Unfreezing backbone at epoch 15...")
                 for param in model.backbone.parameters():
                     if param.dtype.is_floating_point:
                         param.requires_grad = True
 
+                # Rebuild optimizer with LR groups again
+                decoder_params = []
+                backbone_params = []
+                other_params = []
+
+                for name, param in model.named_parameters():
+                    if param.requires_grad:
+                        if "decoder" in name:
+                            decoder_params.append(param)
+                        elif "backbone" in name:
+                            backbone_params.append(param)
+                        else:
+                            other_params.append(param)
+
+                self.optimizer = torch.optim.AdamW([
+                    {"params": other_params, "lr": args.lr},
+                    {"params": decoder_params, "lr": args.lr * 0.1},
+                    {"params": backbone_params, "lr": args.lr * 0.01},
+                ], weight_decay=args.weight_decay)
+
+                print(f"Backbone params unfrozen: {sum(p.numel() for p in backbone_params):,}")
 
             train_stats = train_one_epoch(
                 self.model,

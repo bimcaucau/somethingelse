@@ -42,6 +42,29 @@ def box_iou(boxes1: Tensor, boxes2: Tensor):
     return iou, union
 
 
+# def generalized_box_iou(boxes1, boxes2):
+#     """
+#     Generalized IoU from https://giou.stanford.edu/
+
+#     The boxes should be in [x0, y0, x1, y1] format
+
+#     Returns a [N, M] pairwise matrix, where N = len(boxes1)
+#     and M = len(boxes2)
+#     """
+#     # degenerate boxes gives inf / nan results
+#     # so do an early check
+#     assert (boxes1[:, 2:] >= boxes1[:, :2]).all()
+#     assert (boxes2[:, 2:] >= boxes2[:, :2]).all()
+#     iou, union = box_iou(boxes1, boxes2)
+
+#     lt = torch.min(boxes1[:, None, :2], boxes2[:, :2])
+#     rb = torch.max(boxes1[:, None, 2:], boxes2[:, 2:])
+
+#     wh = (rb - lt).clamp(min=0)  # [N,M,2]
+#     area = wh[:, :, 0] * wh[:, :, 1]
+
+#     return iou - (area - union) / area
+
 def generalized_box_iou(boxes1, boxes2):
     """
     Generalized IoU from https://giou.stanford.edu/
@@ -51,19 +74,30 @@ def generalized_box_iou(boxes1, boxes2):
     Returns a [N, M] pairwise matrix, where N = len(boxes1)
     and M = len(boxes2)
     """
-    # degenerate boxes gives inf / nan results
-    # so do an early check
-    assert (boxes1[:, 2:] >= boxes1[:, :2]).all()
-    assert (boxes2[:, 2:] >= boxes2[:, :2]).all()
+
+    # Sanitize boxes to ensure x1 >= x0 and y1 >= y0
+    def sanitize_boxes(boxes):
+        x1y1 = torch.minimum(boxes[:, :2], boxes[:, 2:])
+        x2y2 = torch.maximum(boxes[:, :2], boxes[:, 2:])
+        return torch.cat([x1y1, x2y2], dim=-1)
+
+    boxes1 = sanitize_boxes(boxes1)
+    boxes2 = sanitize_boxes(boxes2)
+
+    # Compute IoU and union area
     iou, union = box_iou(boxes1, boxes2)
 
-    lt = torch.min(boxes1[:, None, :2], boxes2[:, :2])
-    rb = torch.max(boxes1[:, None, 2:], boxes2[:, 2:])
+    # Enclosing box
+    lt = torch.min(boxes1[:, None, :2], boxes2[:, :2])   # top-left
+    rb = torch.max(boxes1[:, None, 2:], boxes2[:, 2:])   # bottom-right
 
     wh = (rb - lt).clamp(min=0)  # [N,M,2]
     area = wh[:, :, 0] * wh[:, :, 1]
 
+    # Generalized IoU
     return iou - (area - union) / area
+
+
 
 
 def masks_to_boxes(masks):
