@@ -77,7 +77,7 @@ class DetSolver(BaseSolver):
             model = self.model.module if hasattr(self.model, "module") else self.model
 
             # ========== UNFREEZE DECODER ========== #
-            if epoch == 9:
+            if epoch == 0:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
                     if param.dtype.is_floating_point:
@@ -94,16 +94,19 @@ class DetSolver(BaseSolver):
                         else:
                             other_params.append(param)
 
+                base_lr = args.yaml_cfg["optimizer"]["lr"]
+                weight_decay = args.yaml_cfg["optimizer"]["weight_decay"]
+
                 self.optimizer = torch.optim.AdamW([
-                    {"params": other_params, "lr": args.lr},               # normal LR
-                    {"params": decoder_params, "lr": args.lr * 0.1},       # reduced LR for decoder
-                ], weight_decay=args.weight_decay)
+                    {"params": other_params, "lr": base_lr},
+                    {"params": decoder_params, "lr": base_lr * 0.1},
+                ], weight_decay=weight_decay)
 
                 print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
 
 
             # ========== UNFREEZE BACKBONE ========== #
-            if epoch == 15:
+            if epoch == 0:
                 print("Unfreezing backbone at epoch 15...")
                 for param in model.backbone.parameters():
                     if param.dtype.is_floating_point:
@@ -123,11 +126,15 @@ class DetSolver(BaseSolver):
                         else:
                             other_params.append(param)
 
+                # Extract optimizer hyperparameters from YAML config
+                base_lr = args.yaml_cfg["optimizer"]["lr"]
+                weight_decay = args.yaml_cfg["optimizer"]["weight_decay"]
+
                 self.optimizer = torch.optim.AdamW([
-                    {"params": other_params, "lr": args.lr},
-                    {"params": decoder_params, "lr": args.lr * 0.1},
-                    {"params": backbone_params, "lr": args.lr * 0.01},
-                ], weight_decay=args.weight_decay)
+                    {"params": other_params, "lr": base_lr},
+                    {"params": decoder_params, "lr": base_lr * 0.1},
+                    {"params": backbone_params, "lr": base_lr * 0.01},
+                ], weight_decay=weight_decay)
 
                 print(f"Backbone params unfrozen: {sum(p.numel() for p in backbone_params):,}")
 
