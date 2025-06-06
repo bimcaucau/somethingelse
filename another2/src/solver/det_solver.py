@@ -83,10 +83,8 @@ class DetSolver(BaseSolver):
                     if param.dtype.is_floating_point:
                         param.requires_grad = True
 
-                # Rebuild optimizer with LR groups
                 decoder_params = []
                 other_params = []
-
                 for name, param in model.named_parameters():
                     if param.requires_grad:
                         if "decoder" in name:
@@ -99,12 +97,12 @@ class DetSolver(BaseSolver):
 
                 self.optimizer = torch.optim.AdamW([
                     {"params": other_params, "lr": base_lr},
-                    {"params": decoder_params, "lr": base_lr * 0.1},
+                    {"params": decoder_params, "lr": base_lr * 0.01},  # 🔽 Safer
                 ], weight_decay=weight_decay)
 
+                self.optimizer.state = defaultdict(dict)  # ✅ Reset state
+
                 print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
-
-
             # ========== UNFREEZE BACKBONE ========== #
             if epoch == 15:
                 print("Unfreezing backbone at epoch 15...")
@@ -112,7 +110,7 @@ class DetSolver(BaseSolver):
                     if param.dtype.is_floating_point:
                         param.requires_grad = True
 
-                # Rebuild optimizer with LR groups again
+                # Rebuild optimizer param groups
                 decoder_params = []
                 backbone_params = []
                 other_params = []
@@ -126,15 +124,17 @@ class DetSolver(BaseSolver):
                         else:
                             other_params.append(param)
 
-                # Extract optimizer hyperparameters from YAML config
                 base_lr = args.yaml_cfg["optimizer"]["lr"]
                 weight_decay = args.yaml_cfg["optimizer"]["weight_decay"]
 
                 self.optimizer = torch.optim.AdamW([
                     {"params": other_params, "lr": base_lr},
-                    {"params": decoder_params, "lr": base_lr * 0.1},
-                    {"params": backbone_params, "lr": base_lr * 0.01},
+                    {"params": decoder_params, "lr": base_lr * 0.01},
+                    {"params": backbone_params, "lr": base_lr * 0.001},  # 👈 Safer LR
                 ], weight_decay=weight_decay)
+
+                from collections import defaultdict
+                self.optimizer.state = defaultdict(dict)  # ✅ Reset optimizer state
 
                 print(f"Backbone params unfrozen: {sum(p.numel() for p in backbone_params):,}")
 
