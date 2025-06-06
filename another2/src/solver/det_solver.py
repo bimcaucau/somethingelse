@@ -77,7 +77,7 @@ class DetSolver(BaseSolver):
             model = self.model.module if hasattr(self.model, "module") else self.model
 
             # ========== UNFREEZE DECODER ========== #
-            if epoch == 0:
+            if epoch == 9:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
                     if param.dtype.is_floating_point:
@@ -106,7 +106,7 @@ class DetSolver(BaseSolver):
 
 
             # ========== UNFREEZE BACKBONE ========== #
-            if epoch == 0:
+            if epoch == 15:
                 print("Unfreezing backbone at epoch 15...")
                 for param in model.backbone.parameters():
                     if param.dtype.is_floating_point:
