@@ -15,6 +15,8 @@ import torch
 from ..misc import dist_utils, stats
 from ._solver import BaseSolver
 from .det_engine import evaluate, train_one_epoch
+from collections import defaultdict
+
 
 def count_trainable(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -77,7 +79,7 @@ class DetSolver(BaseSolver):
             model = self.model.module if hasattr(self.model, "module") else self.model
 
             # ========== UNFREEZE DECODER ========== #
-            if epoch == 9:
+            if epoch == 1:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
                     if param.dtype.is_floating_point:
@@ -104,7 +106,7 @@ class DetSolver(BaseSolver):
 
                 print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
             # ========== UNFREEZE BACKBONE ========== #
-            if epoch == 15:
+            if epoch == 1:
                 print("Unfreezing backbone at epoch 15...")
                 for param in model.backbone.parameters():
                     if param.dtype.is_floating_point:
