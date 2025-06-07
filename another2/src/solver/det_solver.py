@@ -18,6 +18,7 @@ from .det_engine import evaluate, train_one_epoch
 from collections import defaultdict
 
 
+
 def count_trainable(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 class DetSolver(BaseSolver):
@@ -79,7 +80,7 @@ class DetSolver(BaseSolver):
             model = self.model.module if hasattr(self.model, "module") else self.model
 
             # ========== UNFREEZE DECODER ========== #
-            if epoch == 1:
+            if epoch == 0:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
                     if param.dtype.is_floating_point:
@@ -106,7 +107,7 @@ class DetSolver(BaseSolver):
 
                 print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
             # ========== UNFREEZE BACKBONE ========== #
-            if epoch == 1:
+            if epoch == 0:
                 print("Unfreezing backbone at epoch 15...")
                 for param in model.backbone.parameters():
                     if param.dtype.is_floating_point:
@@ -134,8 +135,6 @@ class DetSolver(BaseSolver):
                     {"params": decoder_params, "lr": base_lr * 0.01},
                     {"params": backbone_params, "lr": base_lr * 0.001},  # 👈 Safer LR
                 ], weight_decay=weight_decay)
-
-                from collections import defaultdict
                 self.optimizer.state = defaultdict(dict)  # ✅ Reset optimizer state
 
                 print(f"Backbone params unfrozen: {sum(p.numel() for p in backbone_params):,}")
