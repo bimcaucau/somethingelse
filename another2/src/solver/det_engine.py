@@ -210,15 +210,22 @@ def train_one_epoch(
 
             with torch.autocast(device_type=str(device), enabled=False):
                 loss_dict = criterion(outputs, targets, **metas)
+                # Check each loss component for NaN/Inf
+                for k, v in loss_dict.items():
+                    if torch.isnan(v).any() or torch.isinf(v).any():
+                        print(f"[NaN DETECTED] in loss component {k}: {v}")
+                        raise ValueError("NaN or Inf in loss")
 
             loss = sum(loss_dict.values())
             scaler.scale(loss).backward()
 
             # NaN gradient check
             for name, param in model.named_parameters():
-                if param.grad is not None and torch.isnan(param.grad).any():
-                    print(f"NaN in gradient: {name}")
-                    raise ValueError("Detected NaN in gradients. Training halted.")
+                if param.grad is not None:
+                    if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                        print(f"[NaN GRADIENT] {name} — grad min: {param.grad.min()}, max: {param.grad.max()}")
+                        raise ValueError("Detected NaN or Inf in gradients. Training halted.")
+
 
             if max_norm > 0:
                 scaler.unscale_(optimizer)
@@ -231,15 +238,21 @@ def train_one_epoch(
         else:
             outputs = model(samples, targets=targets)
             loss_dict = criterion(outputs, targets, **metas)
+            # Check each loss component for NaN/Inf
+            for k, v in loss_dict.items():
+                if torch.isnan(v).any() or torch.isinf(v).any():
+                    print(f"[NaN DETECTED] in loss component {k}: {v}")
+                    raise ValueError("NaN or Inf in loss")
 
             loss: torch.Tensor = sum(loss_dict.values())
             optimizer.zero_grad()
             loss.backward()
 
             for name, param in model.named_parameters():
-                if param.grad is not None and torch.isnan(param.grad).any():
-                    print(f"NaN in gradient: {name}")
-                    raise ValueError("Detected NaN in gradients. Training halted.")
+                if param.grad is not None:
+                    if torch.isnan(param.grad).any() or torch.isinf(param.grad).any():
+                        print(f"[NaN GRADIENT] {name} — grad min: {param.grad.min()}, max: {param.grad.max()}")
+                        raise ValueError("Detected NaN or Inf in gradients. Training halted.")
 
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
