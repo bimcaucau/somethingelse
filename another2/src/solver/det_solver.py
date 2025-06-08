@@ -79,7 +79,6 @@ class DetSolver(BaseSolver):
             #         print(f"Refresh EMA at epoch {epoch} with decay {self.ema.decay}")
             model = self.model.module if hasattr(self.model, "module") else self.model
 
-            # ========== UNFREEZE DECODER SAFELY ========== #
             if epoch == 9:
                 print("Unfreezing decoder at epoch 9...")
                 for param in model.decoder.parameters():
@@ -93,6 +92,14 @@ class DetSolver(BaseSolver):
                     "lr": base_lr * 0.001  # More conservative LR
                 })
                 print(f"Decoder params unfrozen: {sum(p.numel() for p in decoder_params):,}")
+
+                if self.lr_warmup_scheduler:
+                    from ..optim import WarmupLR
+                    self.lr_warmup_scheduler = WarmupLR(
+                        optimizer=self.optimizer,
+                        warmup_steps=1000,
+                        warmup_start_lr=1e-6,
+                    )
 
             # ========== UNFREEZE BACKBONE SAFELY ========== #
             if epoch == 15:
@@ -108,6 +115,15 @@ class DetSolver(BaseSolver):
                     "lr": base_lr * 0.0005  # Safer yet
                 })
                 print(f"Backbone params unfrozen: {sum(p.numel() for p in backbone_params):,}")
+
+                if self.lr_warmup_scheduler:
+                    from ..optim import WarmupLR
+                    self.lr_warmup_scheduler = WarmupLR(
+                        optimizer=self.optimizer,
+                        warmup_steps=1000,
+                        warmup_start_lr=1e-6,
+                    )
+
 
             train_stats = train_one_epoch(
                 self.model,
