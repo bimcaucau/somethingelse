@@ -151,7 +151,7 @@ class HybridHSFPNEncoder(nn.Module):
                 raise ValueError(f"NaN or Inf in output of input_proj[{i}]")
 
             proj_feats.append(out)
-            
+
         # Step 2: Optional transformer encoder  
         for idx, enc in zip(self.use_encoder_idx, self.encoder):  
             B, C, H, W = proj_feats[idx].shape  
@@ -166,6 +166,11 @@ class HybridHSFPNEncoder(nn.Module):
             proj_feats[idx] = x.permute(0, 2, 1).reshape(B, C, H, W)
         # Step 3: HS-FPN fusion
         out_feats = self.hsfpn(proj_feats)
+
+        for i, feat in enumerate(out_feats):
+            if torch.isnan(feat).any() or torch.isinf(feat).any():
+                print(f"[NaN DETECTED] HS-FPN output out_feats[{i}] has NaN/Inf. Min: {feat.min().item()}, Max: {feat.max().item()}")
+                raise ValueError("NaN or Inf in encoder final output")
 
         return out_feats
 
