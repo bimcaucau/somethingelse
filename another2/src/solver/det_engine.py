@@ -105,10 +105,14 @@ def train_one_epoch(
             loss: torch.Tensor = sum(loss_dict.values())
             optimizer.zero_grad()
             loss.backward()
-
+            for name, param in model.named_parameters():
+                if param.grad is not None and torch.isnan(param.grad).any():
+                    print(f"NaN in gradient of {name}")
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
-
+                           
+            if max_norm > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
             optimizer.step()
 
         # ema
