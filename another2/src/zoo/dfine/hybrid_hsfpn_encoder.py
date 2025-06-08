@@ -48,6 +48,7 @@ class HybridHSFPNEncoder(nn.Module):
         self.out_channels = [hidden_dim] * len(in_channels)
         self.out_strides = feat_strides
 
+
         # Project input channels to hidden_dim
         self.input_proj = nn.ModuleList([
             nn.Sequential(OrderedDict([
@@ -55,6 +56,14 @@ class HybridHSFPNEncoder(nn.Module):
                 ('norm', nn.BatchNorm2d(hidden_dim))
             ])) for c in in_channels
         ])
+
+        # Explicitly initialize Conv and BN layers to prevent instability
+        for m in self.input_proj.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
 
         # Optional transformer encoder layers
         encoder_layer = TransformerEncoderLayer(
@@ -126,8 +135,23 @@ class HybridHSFPNEncoder(nn.Module):
         assert len(feats) == len(self.in_channels)  
     
         # Step 1: Project backbone features  
-        proj_feats = [proj(f) for proj, f in zip(self.input_proj, feats)]  
+        #proj_feats = [proj(f) for proj, f in zip(self.input_proj, feats)]  
     
+        # Step 1: Project backbone features with NaN/Inf checks
+        proj_feats = []
+        for i, (proj, f) in enumerate(zip(self.input_proj, feats)):
+            if torch.isnan(f).any() or torch.isinf(f).any():
+                print(f"[NaN DETECTED] input_proj[{i}] input has NaN/Inf. Min: {f.min().item()}, Max: {f.max().item()}")
+                raise ValueError(f"NaN or Inf in input to input_proj[{i}]")
+
+            out = proj(f)
+
+            if torch.isnan(out).any() or torch.isinf(out).any():
+                print(f"[NaN DETECTED] input_proj[{i}] output has NaN/Inf. Min: {out.min().item()}, Max: {out.max().item()}")
+                raise ValueError(f"NaN or Inf in output of input_proj[{i}]")
+
+            proj_feats.append(out)
+            
         # Step 2: Optional transformer encoder  
         for idx, enc in zip(self.use_encoder_idx, self.encoder):  
             B, C, H, W = proj_feats[idx].shape  
